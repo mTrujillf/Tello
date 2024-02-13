@@ -1803,20 +1803,9 @@ class NatNetClient:
 
 
 
-
-
-
-
-    def getKeyboradInput(self):
+   def getKeyboradInput(self):
         if dt.getKey("k") :
-            cv2.destroyAllWindows()
-            #file = open('vuelo.txt','w')
-            #for item in todosRC:
-            #    for rc in item:
-            #        file.write(str(rc) + ",")
-            #    file.write("\n")
-            #file.write("Len:" + str(len(todosRC)))
-            #file.close()
+            cv2.destroyAllWindows() 
             self.tello.land()
             self.tello.streamoff()
             
@@ -1824,123 +1813,45 @@ class NatNetClient:
         return True
 
     def tello_vuelo(self):
-        tope = [600,150]
-        #600 funciono bien
-        todosRC = list()
-        #dir_final= r'D:\Python\MenosVision\vuelo2Bien'
-        #jpg = ".jpg"
-        #Control RC dependiendo de qué matriz fue máxima.
-        matRc = [[[0,15,7],[0,25,7],[0,33,7]],
-                 [[0,40,5],[0,45,5]],
-                 [[0,55,0],[0,60,0]],
-                 [[0,67,0],[0,74,0]],
-                 [[0,-15,-7],[0,-25,-7],[0,-33,-7]],
-                 [[0,-40,-5],[0,-45,-5]],
-                 [[0,-55,0],[0,-60,0]],
-                 [[0,-67,0],[0,-74,0]]]
-        
-        #Crea el objeto del drone.
-        
-         
-        #Inicio de detección de teclado.                
+                      
         dt.init()
         
-        #Inicio de instrucciones para el drone.
         self.tello.connect()
         self.tello.send_rc_control(0, 0, 0, 0)
-        self.tello.streamoff()
-        self.tello.streamon()
-
-        try:
-            #print(tello.get_battery())
-            self.tello.takeoff()
-            self.tello.send_rc_control(0, 0, 0, 0)
-            self.tello.send_command_with_return("downvision 0")
-            self.tello.send_command_with_return("downvision 1")
-            self.tello.set_video_fps(Tello.FPS_5)
-            self.tello.set_video_fps(Tello.FPS_30)
-            img = self.tello.get_frame_read().frame
-            #tello.move_up(20)
-            #tello.move_down(25)
-            sleep(2)
-            sigue =True 
-            
-            #matInicio = np.ones((240,320))
-            
-            while sigue:
-                sigue = self.getKeyboradInput()
-                img = self.tello.get_frame_read().frame
-                bw = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-                BW = aI.blackwhite(bw)
-                der = sum(sum(BW[0:119,0:80]))
-                izq = sum(sum(BW[120:239,0:90]))
-                x = (der - izq)
-                x = int(x/150)
-                #print(x)
-                self.tello.send_rc_control(x,-10, 0, 0)
-                if abs(x) < 5 :
-                    sigue = False
-                cv2.imshow("Img", img)
-                cv2.waitKey(1)
-             
+        self.tello.takeoff()
+        self.tello.send_rc_control(0, 0, 0, 0)
+        sleep(2)
+        sigue =True 
                 
+        img = self.tello.get_frame_read().frame
+        img = img[39:199,59:299]
+        bw = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        BW = aI.blackwhite(bw)
+        cv2.imshow("Img", BW)
+        cv2.waitKey(1)
+
+        while True:
             self.getKeyboradInput()#Detecta si se apretó alguna tecla para detener.
                 
-            self.tello.send_rc_control(0, 0, 0, 0)
-            #arr = [0,0,0,0]
-            #todosRC.append(arr)
-            #Lectura y visualización de la imagen.
-            img = self.tello.get_frame_read().frame
-            img = img[39:199,59:299]
-            bw = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            BW = aI.blackwhite(bw)
-            cv2.imshow("Img", BW)
-            cv2.waitKey(1)
+            pos_actual = self.tello_pos_actual
+            rot_actual = self.tello_rot_actual
                 
-            #Método que calcula el máximo de las matrices.
-            i,k = aI.getTodo(BW,tope) 
-            start = time.time_ns()
-            #os.chdir(dir_final) 
-            #os.listdir(dir_final)
-            
-            while True:
-                self.getKeyboradInput()#Detecta si se apretó alguna tecla para detener.
+            x = -pos_actual[0]
+            z = -pos_actual[1]
+            y = -pos_actual[2]
                 
-                pos_actual = self.tello_pos_actual
-                rot_actual = self.tello_rot_actual
+            q11,q31,q21,q01 = rot_actual
                 
-                x = -pos_actual[0]
-                z = -pos_actual[1]
-                y = -pos_actual[2]
+            roll = math.atan(((2 * q21*q31) + (2 * q01*q11))/((2 * q01*q01) + (2 * q31*q31) - 1 ))*(180 / 3.14159)
+            pitch = (-math.asin((2 * q11*q31) - (2 * q01*q21)))*(180/3.14159)
+            yaw = math.atan2(((2 * q11*q21) + (2*q01*q31)), ((2 * q01*q01) + (2 * q11*q11) - 1)) * (180/3.14159)
+            yaw = -yaw
+            zDes = 100
                 
-                q11,q31,q21,q01 = rot_actual
-                
-                roll = math.atan(((2 * q21*q31) + (2 * q01*q11))/((2 * q01*q01) + (2 * q31*q31) - 1 ))*(180 / 3.14159)
-                pitch = (-math.asin((2 * q11*q31) - (2 * q01*q21)))*(180/3.14159)
-                yaw = math.atan2(((2 * q11*q21) + (2*q01*q31)), ((2 * q01*q01) + (2 * q11*q11) - 1)) * (180/3.14159)
-                yaw = -yaw
-                zDes = 100
-                
-                while abs(z) - abs(zDes) < 10:
-                    self.tello.send_rc_control(0, 0, 10, 0)
-                    
-        except:
-            self.tello.land()
-
-        
-     
-        
-     
-        
-     
-        
-     
-        
-     
-        
-     
-        
-     
+            if zDes - z > 10 :
+                self.tello.send_rc_control(0, 0, 10, 0)
+            else: 
+                self.tello.send_rc_control(0, 0, 0, 0)
         
      
         
